@@ -1,5 +1,6 @@
 const taskdb = require("../model/taskModel")
-const redis = require("redis")
+const redis = require("redis");
+const producerTo = require("./producer");
 
 const redisClient = redis.createClient();
 redisClient.on('error', err => console.log('Redis Client Error', err));
@@ -44,6 +45,7 @@ const updateTaskService = async(taskId, task, status) => {
         }
         if(status) {
             await taskdb.update({status: status}, {where: {taskid: taskId}});
+            await producerTo(status+taskId,taskId, status);
         }
 
         return {'message': 'success updating task'};

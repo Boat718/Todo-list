@@ -1,17 +1,29 @@
 const taskdb = require("../model/taskModel")
+const redis = require("redis")
 
+const redisClient = redis.createClient();
+redisClient.on('error', err => console.log('Redis Client Error', err));
+redisClient.connect();
 
 const getTaskListService = async(userId) => {
     try {
-        const data = await taskdb.findAll({where: {userid: userId}});
+        const key = "user"+userId
+        const value = await redisClient.get(key);
+        if(value) {
+            console.log("send from redis")
+            return {'message': 'success getting all task', data: JSON.parse(value)}
+        }
 
-        if(data.length === 0) {
+        const dataDB = await taskdb.findAll({where: {userid: userId}});
+        if(dataDB.length === 0) {
             return 'there is no task for this user';
         }
+        redisClient.setEx(key,5*60, JSON.stringify([...dataDB]));
         return {'message': 'success getting all task',
-            data: [...data]
+            data: [...dataDB]
+            }
         }
-    } catch (error) {
+    catch (error) {
         return error;
     }
 }
